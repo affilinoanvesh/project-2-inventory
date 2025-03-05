@@ -10,6 +10,9 @@ import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
 import Inventory from './pages/Inventory';
 import ProductExpiry from './pages/expiry';
+import PurchaseOrders from './pages/PurchaseOrders';
+import SuppliersPage from './components/suppliers/SuppliersPage';
+import AdditionalRevenuePage from './pages/AdditionalRevenue';
 import { db } from './db';
 
 function App() {
@@ -42,9 +45,12 @@ function App() {
               <Route path="/products" element={<Products />} />
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/expenses" element={<Expenses />} />
+              <Route path="/additional-revenue" element={<AdditionalRevenuePage />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/expiry" element={<ProductExpiry />} />
+              <Route path="/purchase-orders" element={<PurchaseOrders />} />
+              <Route path="/suppliers" element={<SuppliersPage />} />
             </Routes>
           </div>
         </div>

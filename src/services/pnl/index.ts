@@ -1,17 +1,18 @@
-import { Order, InventoryItem, OverheadCost, DateRange } from '../../types';
+import { Order, InventoryItem, OverheadCost, DateRange, AdditionalRevenue } from '../../types';
 import { getExpenses } from '../../db/operations/expenses';
 import { calculateOrderProfits } from './orderCalculations';
 import { calculateExpenses } from './expenseCalculations';
 import { createInventoryMap } from './inventoryUtils';
 
 /**
- * Calculate profit and margins for orders with expenses included
+ * Calculate profit and margins for orders with expenses and additional revenue included
  */
 export const calculateProfitAndLoss = async (
   orders: Order[],
   inventory: InventoryItem[],
   overheadCosts: OverheadCost[],
-  dateRange: DateRange
+  dateRange: DateRange,
+  additionalRevenue: AdditionalRevenue[] = []
 ) => {
   // Create inventory map for quick lookups
   const inventoryMap = createInventoryMap(inventory);
@@ -43,21 +44,43 @@ export const calculateProfitAndLoss = async (
     percentageOverheadCalculator
   );
 
+  // Calculate additional revenue total
+  const totalAdditionalRevenue = additionalRevenue.reduce((sum, revenue) => {
+    const amount = revenue.amount || 0;
+    return sum + (isNaN(amount) ? 0 : amount);
+  }, 0);
+
   // Calculate summary
-  const totalRevenue = processedOrders.reduce((sum, order) => sum + parseFloat(order.total), 0);
-  const totalCost = processedOrders.reduce((sum, order) => sum + (order.cost_total || 0), 0);
+  const totalOrderRevenue = processedOrders.reduce((sum, order) => {
+    const orderTotal = parseFloat(order.total);
+    return sum + (isNaN(orderTotal) ? 0 : orderTotal);
+  }, 0);
+  
+  const totalRevenue = totalOrderRevenue + totalAdditionalRevenue;
+  
+  const totalCost = processedOrders.reduce((sum, order) => {
+    const orderCost = order.cost_total || 0;
+    return sum + (isNaN(orderCost) ? 0 : orderCost);
+  }, 0);
+  
   const totalProfit = totalRevenue - totalCost;
   const netProfit = totalProfit - totalExpenses;
   const averageMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
   const orderCount = processedOrders.length;
   const itemCount = processedOrders.reduce(
-    (sum, order) => sum + order.line_items.reduce((itemSum, item) => itemSum + item.quantity, 0), 
+    (sum, order) => sum + order.line_items.reduce((itemSum, item) => {
+      const quantity = item.quantity || 0;
+      return itemSum + (isNaN(quantity) ? 0 : quantity);
+    }, 0), 
     0
   );
 
   return {
     orders: processedOrders,
+    additionalRevenue,
     summary: {
+      totalOrderRevenue,
+      totalAdditionalRevenue,
       totalRevenue,
       totalCost,
       totalProfit,

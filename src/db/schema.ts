@@ -1,4 +1,4 @@
-import { ApiCredentials, Order, Product, InventoryItem, OverheadCost, ProductVariation, Expense, SupplierPriceImport, SupplierPriceItem, ExpenseCategory, ExpenseImport, ProductExpiry } from '../types';
+import { ApiCredentials, Order, Product, InventoryItem, OverheadCost, ProductVariation, Expense, SupplierPriceImport, SupplierPriceItem, ExpenseCategory, ExpenseImport, ProductExpiry, PurchaseOrder, PurchaseOrderItem, AdditionalRevenue, AdditionalRevenueCategory } from '../types';
 import Dexie, { Table } from 'dexie';
 
 export class AppDatabase extends Dexie {
@@ -15,6 +15,11 @@ export class AppDatabase extends Dexie {
   supplierImports!: Table<SupplierPriceImport>;
   supplierImportItems!: Table<SupplierPriceItem & { id?: number; import_id: number }>;
   productExpiry!: Table<ProductExpiry & { id?: number }>;
+  purchaseOrders!: Table<PurchaseOrder>;
+  purchaseOrderItems!: Table<PurchaseOrderItem>;
+  suppliers!: Table<{ id: number; name: string; email: string; phone: string; created_at: Date }>;
+  additionalRevenue!: Table<AdditionalRevenue>;
+  additionalRevenueCategories!: Table<AdditionalRevenueCategory>;
 
   constructor() {
     super('WooCommercePnLTracker');
@@ -38,6 +43,23 @@ export class AppDatabase extends Dexie {
     this.version(2).stores({
       productExpiry: '++id, product_id, variation_id, sku, expiry_date'
     });
+    
+    // Add version 3 with the new purchase order tables
+    this.version(3).stores({
+      purchaseOrders: '++id, date, supplier_name, supplier_id, reference_number, status, expiry_date, created_at',
+      purchaseOrderItems: '++id, purchase_order_id, sku, product_name, quantity, batch_number, expiry_date'
+    });
+
+    // Add suppliers table
+    this.version(4).stores({
+      suppliers: '++id, name, email, phone, created_at'
+    });
+    
+    // Add additional revenue tables
+    this.version(5).stores({
+      additionalRevenue: '++id, date, category, period',
+      additionalRevenueCategories: '++id, name'
+    });
   }
 
   // Initialize the database with default tables if needed
@@ -60,6 +82,8 @@ export class AppDatabase extends Dexie {
         await this.expenseImports.clear();
         await this.supplierImports.clear();
         await this.supplierImportItems.clear();
+        await this.additionalRevenue.clear();
+        await this.additionalRevenueCategories.clear();
         
         // Add default expense categories
         await this.expenseCategories.bulkAdd([
@@ -73,6 +97,16 @@ export class AppDatabase extends Dexie {
           { name: 'Shipping', description: 'Shipping and postage costs', color: '#6366f1', is_tax_deductible: true },
           { name: 'Insurance', description: 'Business insurance premiums', color: '#14b8a6', is_tax_deductible: true },
           { name: 'Other', description: 'Miscellaneous expenses', color: '#64748b', is_tax_deductible: false }
+        ]);
+        
+        // Add default additional revenue categories
+        await this.additionalRevenueCategories.bulkAdd([
+          { name: 'Offline Sales', description: 'Sales made offline or in-person', color: '#4f46e5', is_taxable: true },
+          { name: 'GST Returns', description: 'GST tax returns', color: '#0ea5e9', is_taxable: false },
+          { name: 'Refunds', description: 'Refunds from suppliers or services', color: '#10b981', is_taxable: false },
+          { name: 'Grants', description: 'Business grants or subsidies', color: '#f59e0b', is_taxable: true },
+          { name: 'Investments', description: 'Investment returns', color: '#8b5cf6', is_taxable: true },
+          { name: 'Other', description: 'Other revenue sources', color: '#64748b', is_taxable: true }
         ]);
         
         // Add a flag to indicate the database has been initialized
@@ -102,6 +136,8 @@ export class AppDatabase extends Dexie {
       await this.expenseImports.count();
       await this.supplierImports.count();
       await this.supplierImportItems.count();
+      await this.additionalRevenue.count();
+      await this.additionalRevenueCategories.count();
       return true;
     } catch (error) {
       return false;

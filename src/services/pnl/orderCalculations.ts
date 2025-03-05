@@ -14,7 +14,8 @@ export function calculateOrderProfits(
   return orders.map(order => {
     // Calculate percentage-based overhead
     const orderTotal = parseFloat(order.total);
-    const percentageOverhead = percentageOverheadCalculator(orderTotal);
+    const safeOrderTotal = isNaN(orderTotal) ? 0 : orderTotal;
+    const percentageOverhead = percentageOverheadCalculator(safeOrderTotal);
 
     // Process line items
     const lineItems = order.line_items.map(item => {
@@ -49,13 +50,15 @@ export function calculateOrderProfits(
       
       // Use supplier price if available, otherwise use cost price
       const finalCostPrice = supplierPrice > 0 ? supplierPrice : costPrice;
-      const itemCost = finalCostPrice * item.quantity;
+      const quantity = isNaN(item.quantity) ? 0 : item.quantity;
+      const itemCost = finalCostPrice * quantity;
       
       // Calculate per-item overhead
       const itemOverhead = perItemOverhead(item);
       
       const totalCost = itemCost + itemOverhead;
-      const revenue = parseFloat(item.total);
+      const itemTotal = parseFloat(item.total);
+      const revenue = isNaN(itemTotal) ? 0 : itemTotal;
       const profit = revenue - totalCost;
       const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
@@ -68,10 +71,15 @@ export function calculateOrderProfits(
     });
 
     // Calculate order totals
-    const costTotal = lineItems.reduce((sum, item) => sum + (item.cost_price || 0) * item.quantity, 0);
+    const costTotal = lineItems.reduce((sum, item) => {
+      const costPrice = item.cost_price || 0;
+      const quantity = isNaN(item.quantity) ? 0 : item.quantity;
+      return sum + costPrice * quantity;
+    }, 0);
+    
     const totalOverhead = perOrderOverhead + percentageOverhead + overheadPerOrder;
     const totalCost = costTotal + totalOverhead;
-    const revenue = parseFloat(order.total);
+    const revenue = isNaN(orderTotal) ? 0 : orderTotal;
     const profit = revenue - totalCost;
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 

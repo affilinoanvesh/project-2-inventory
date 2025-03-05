@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Order, Product, Expense } from '../../types';
+import { Order, Product, Expense, AdditionalRevenue } from '../../types';
 import { groupDataByPeriod } from './utils';
 
 // Generate sales report
@@ -128,18 +128,73 @@ export const generateExpensesReport = (expenses: Expense[], periodType: string) 
   return [...categoryData, ...timeData];
 };
 
+// Generate additional revenue report
+export const generateAdditionalRevenueReport = (revenues: AdditionalRevenue[], periodType: string) => {
+  // Group by category
+  const categoryMap = new Map<string, {
+    category: string,
+    amount: number,
+    count: number,
+    percentage: number
+  }>();
+  
+  const totalRevenueAmount = revenues.reduce((sum, revenue) => sum + revenue.amount, 0);
+  
+  revenues.forEach(revenue => {
+    if (!categoryMap.has(revenue.category)) {
+      categoryMap.set(revenue.category, {
+        category: revenue.category,
+        amount: 0,
+        count: 0,
+        percentage: 0
+      });
+    }
+    
+    const category = categoryMap.get(revenue.category)!;
+    category.amount += revenue.amount;
+    category.count += 1;
+  });
+  
+  // Calculate percentages
+  categoryMap.forEach(category => {
+    category.percentage = totalRevenueAmount > 0 
+      ? (category.amount / totalRevenueAmount) * 100 
+      : 0;
+  });
+  
+  // Convert to array
+  const categoryData = Array.from(categoryMap.values());
+  
+  // Group by time period
+  const timeData = groupDataByPeriod(revenues, (revenue) => revenue.amount, 'date', periodType);
+  
+  // Return both category and time-based data
+  return [...categoryData, ...timeData];
+};
+
 // Generate profitability report
-export const generateProfitabilityReport = (orders: Order[], expenses: Expense[], periodType: string) => {
+export const generateProfitabilityReport = (
+  orders: Order[], 
+  expenses: Expense[], 
+  additionalRevenues: AdditionalRevenue[],
+  periodType: string
+) => {
   // Group orders by period
   const monthlyData = groupDataByPeriod(orders, (order) => parseFloat(order.total), 'date_created', periodType);
   
   // Group expenses by period
   const monthlyExpenses = groupDataByPeriod(expenses, (expense) => expense.amount, 'date', periodType);
   
+  // Group additional revenue by period
+  const monthlyAdditionalRevenue = groupDataByPeriod(additionalRevenues, (revenue) => revenue.amount, 'date', periodType);
+  
   // Merge data
   return monthlyData.map(item => {
     const matchingExpense = monthlyExpenses.find(exp => exp.period === item.period);
     const expenseAmount = matchingExpense ? matchingExpense.value : 0;
+    
+    const matchingAdditionalRevenue = monthlyAdditionalRevenue.find(rev => rev.period === item.period);
+    const additionalRevenueAmount = matchingAdditionalRevenue ? matchingAdditionalRevenue.value : 0;
     
     const periodOrders = orders.filter(order => {
       const orderDate = new Date(order.date_created);
@@ -147,15 +202,63 @@ export const generateProfitabilityReport = (orders: Order[], expenses: Expense[]
       return format(orderDate, periodFormat) === item.period;
     });
     
-    const totalRevenue = periodOrders.reduce((sum, order) => sum + parseFloat(order.total), 0);
-    const totalCost = periodOrders.reduce((sum, order) => sum + (order.cost_total || 0), 0);
+    // Debug order data
+    console.log(`Period ${item.period} has ${periodOrders.length} orders`);
+    if (periodOrders.length > 0) {
+      console.log('Sample order data:', {
+        firstOrder: {
+          id: periodOrders[0].id,
+          date: periodOrders[0].date_created,
+          total: periodOrders[0].total,
+          parsedTotal: parseFloat(periodOrders[0].total)
+        }
+      });
+    }
+    
+    // More robust revenue calculation with error handling
+    const totalOrderRevenue = periodOrders.reduce((sum, order) => {
+      // Check if order.total exists and is valid
+      if (!order.total) {
+        console.error(`Order ${order.id} has no total value`);
+        return sum;
+      }
+      
+      const orderTotal = parseFloat(order.total);
+      if (isNaN(orderTotal)) {
+        console.error(`Order ${order.id} has invalid total: ${order.total}`);
+        return sum;
+      }
+      
+      return sum + orderTotal;
+    }, 0);
+    
+    console.log(`Period ${item.period} - Total Order Revenue: ${totalOrderRevenue}`);
+    
+    const totalRevenue = totalOrderRevenue + additionalRevenueAmount;
+    const totalCost = periodOrders.reduce((sum, order) => {
+      const costTotal = order.cost_total || 0;
+      return sum + (isNaN(costTotal) ? 0 : costTotal);
+    }, 0);
     const grossProfit = totalRevenue - totalCost;
     const netProfit = grossProfit - expenseAmount;
     const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
     
+    // Debug final calculations
+    console.log(`Period ${item.period} - Final calculations:`, {
+      totalRevenue,
+      totalCost,
+      grossProfit,
+      expenses: expenseAmount,
+      netProfit,
+      profitMargin
+    });
+    
     return {
       period: item.period,
+      orderRevenue: totalOrderRevenue,
+      additionalRevenue: additionalRevenueAmount,
       revenue: totalRevenue,
+      totalRevenue: totalRevenue,
       cost: totalCost,
       expenses: expenseAmount,
       grossProfit,

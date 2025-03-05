@@ -4,12 +4,22 @@ import { Expense, DateRange } from '../../types';
  * Calculate expenses and prorate them based on period type
  */
 export function calculateExpenses(expenses: Expense[], dateRange: DateRange) {
+  // Filter one-time expenses by date range first
+  const filteredOneTimeExpenses = expenses.filter(expense => {
+    if (!expense.period) {
+      // Only filter one-time expenses by date
+      const expenseDate = new Date(expense.date);
+      return expenseDate >= dateRange.startDate && expenseDate <= dateRange.endDate;
+    }
+    return true; // Keep recurring expenses, they'll be prorated
+  });
+  
   // Group expenses by period type
-  const dailyExpenses = expenses.filter(expense => expense.period === 'daily');
-  const weeklyExpenses = expenses.filter(expense => expense.period === 'weekly');
-  const monthlyExpenses = expenses.filter(expense => expense.period === 'monthly');
-  const yearlyExpenses = expenses.filter(expense => expense.period === 'yearly');
-  const oneTimeExpenses = expenses.filter(expense => !expense.period);
+  const dailyExpenses = filteredOneTimeExpenses.filter(expense => expense.period === 'daily');
+  const weeklyExpenses = filteredOneTimeExpenses.filter(expense => expense.period === 'weekly');
+  const monthlyExpenses = filteredOneTimeExpenses.filter(expense => expense.period === 'monthly');
+  const yearlyExpenses = filteredOneTimeExpenses.filter(expense => expense.period === 'yearly');
+  const oneTimeExpenses = filteredOneTimeExpenses.filter(expense => !expense.period);
   
   // Calculate prorated expenses for the period
   const daysBetween = Math.max(1, Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24)));
@@ -29,7 +39,7 @@ export function calculateExpenses(expenses: Expense[], dateRange: DateRange) {
   
   // Group expenses by category
   const expensesByCategory: Record<string, number> = {};
-  expenses.forEach(expense => {
+  filteredOneTimeExpenses.forEach(expense => {
     if (!expensesByCategory[expense.category]) {
       expensesByCategory[expense.category] = 0;
     }

@@ -132,6 +132,10 @@ export const groupDataByPeriod = <T,>(
 
 // Format currency
 export const formatCurrency = (value: number) => {
+  if (value === undefined || value === null || isNaN(value)) {
+    console.error('Invalid currency value:', value);
+    return '$0.00';
+  }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD'
@@ -140,5 +144,9 @@ export const formatCurrency = (value: number) => {
 
 // Format percentage
 export const formatPercentage = (value: number) => {
+  if (value === undefined || value === null || isNaN(value)) {
+    console.error('Invalid percentage value:', value);
+    return '0.00%';
+  }
   return `${value.toFixed(2)}%`;
 };

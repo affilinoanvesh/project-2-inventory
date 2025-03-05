@@ -25,11 +25,33 @@ const ProfitabilityReport: React.FC<ProfitabilityReportProps> = ({ data }) => {
   };
   
   // Calculate totals
-  const totalRevenue = data.reduce((sum, item) => sum + item.revenue, 0);
-  const totalCost = data.reduce((sum, item) => sum + item.cost, 0);
-  const totalExpenses = data.reduce((sum, item) => sum + item.expenses, 0);
-  const totalGrossProfit = data.reduce((sum, item) => sum + item.grossProfit, 0);
-  const totalNetProfit = data.reduce((sum, item) => sum + item.netProfit, 0);
+  const totalRevenue = data.reduce((sum, item) => {
+    // Check for both revenue and totalRevenue properties for backward compatibility
+    const itemRevenue = typeof item.revenue !== 'undefined' ? item.revenue : 
+                        (typeof item.totalRevenue !== 'undefined' ? item.totalRevenue : 0);
+    return sum + (isNaN(itemRevenue) ? 0 : itemRevenue);
+  }, 0);
+  
+  const totalCost = data.reduce((sum, item) => {
+    const cost = item.cost || 0;
+    return sum + (isNaN(cost) ? 0 : cost);
+  }, 0);
+  
+  const totalExpenses = data.reduce((sum, item) => {
+    const expenses = item.expenses || 0;
+    return sum + (isNaN(expenses) ? 0 : expenses);
+  }, 0);
+  
+  const totalGrossProfit = data.reduce((sum, item) => {
+    const grossProfit = item.grossProfit || 0;
+    return sum + (isNaN(grossProfit) ? 0 : grossProfit);
+  }, 0);
+  
+  const totalNetProfit = data.reduce((sum, item) => {
+    const netProfit = item.netProfit || 0;
+    return sum + (isNaN(netProfit) ? 0 : netProfit);
+  }, 0);
+  
   const averageProfitMargin = totalRevenue > 0 ? (totalNetProfit / totalRevenue) * 100 : 0;
   
   return (
@@ -206,7 +228,8 @@ const ProfitabilityReport: React.FC<ProfitabilityReportProps> = ({ data }) => {
                       {item.period}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatCurrency(item.revenue)}
+                      {formatCurrency(item.revenue !== undefined ? item.revenue : 
+                                     (item.totalRevenue !== undefined ? item.totalRevenue : 0))}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatCurrency(item.cost)}

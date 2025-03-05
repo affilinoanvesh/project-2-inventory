@@ -75,16 +75,32 @@ const Dashboard: React.FC = () => {
       setOrders(filteredOrders);
       setExpensesByCategory(result.summary.expensesByCategory);
       setTotalExpenses(result.summary.totalExpenses);
-      setNetProfit(result.summary.netProfit);
       
       // Calculate P&L summary
-      const totalRevenue = filteredOrders.reduce((sum, order) => sum + parseFloat(order.total), 0);
-      const totalCost = filteredOrders.reduce((sum, order) => sum + (order.cost_total || 0), 0);
+      const totalRevenue = filteredOrders.reduce((sum, order) => {
+        const orderTotal = parseFloat(order.total);
+        return sum + (isNaN(orderTotal) ? 0 : orderTotal);
+      }, 0);
+      
+      const totalCost = filteredOrders.reduce((sum, order) => {
+        const orderCost = order.cost_total || 0;
+        return sum + (isNaN(orderCost) ? 0 : orderCost);
+      }, 0);
+      
       const totalProfit = totalRevenue - totalCost;
+      
+      // Calculate net profit based on the filtered orders' gross profit and expenses
+      // This ensures consistency between the displayed values
+      const calculatedNetProfit = totalProfit - result.summary.totalExpenses;
+      setNetProfit(calculatedNetProfit);
+      
       const averageMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
       const orderCount = filteredOrders.length;
       const itemCount = filteredOrders.reduce(
-        (sum, order) => sum + order.line_items.reduce((itemSum, item) => itemSum + item.quantity, 0), 
+        (sum, order) => sum + order.line_items.reduce((itemSum, item) => {
+          const quantity = item.quantity || 0;
+          return itemSum + (isNaN(quantity) ? 0 : quantity);
+        }, 0), 
         0
       );
       

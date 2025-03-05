@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import { Download, Filter, Calendar, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import DateRangePicker from '../components/DateRangePicker';
-import { DateRange, Order, Product, Expense, ReportData } from '../types';
+import { DateRange, Order, Product, Expense, ReportData, AdditionalRevenue } from '../types';
 import { 
   fetchOrders, 
   fetchProducts, 
@@ -21,9 +21,10 @@ import SalesReport from '../components/reports/SalesReport';
 import ProductsReport from '../components/reports/ProductsReport';
 import ExpensesReport from '../components/reports/ExpensesReport';
 import ProfitabilityReport from '../components/reports/ProfitabilityReport';
+import AdditionalRevenueReport from '../components/reports/AdditionalRevenueReport';
 
 // Report types
-type ReportType = 'sales' | 'products' | 'expenses' | 'profitability';
+type ReportType = 'sales' | 'products' | 'expenses' | 'additionalRevenue' | 'profitability';
 
 // Report period types
 type PeriodType = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
@@ -86,6 +87,10 @@ const Reports: React.FC = () => {
       case 'expenses':
         data = reportData.expenseData.filter(item => !item.period); // Only category data
         filename = 'expenses-report';
+        break;
+      case 'additionalRevenue':
+        data = reportData.additionalRevenueReport.filter(item => !item.period); // Only category data
+        filename = 'additional-revenue-report';
         break;
       case 'profitability':
         data = reportData.profitabilityData;
@@ -160,6 +165,7 @@ const Reports: React.FC = () => {
               <option value="sales">Sales Report</option>
               <option value="products">Products Report</option>
               <option value="expenses">Expenses Report</option>
+              <option value="additionalRevenue">Additional Revenue</option>
               <option value="profitability">Profitability Report</option>
             </select>
           </div>
@@ -212,6 +218,13 @@ const Reports: React.FC = () => {
           <ExpensesReport 
             categoryData={reportData.expenseData.filter(item => item.category)} 
             timeData={reportData.expenseData.filter(item => item.period)} 
+          />
+        )}
+        
+        {reportType === 'additionalRevenue' && (
+          <AdditionalRevenueReport 
+            categoryData={reportData.additionalRevenueReport.filter(item => item.category)} 
+            timeData={reportData.additionalRevenueReport.filter(item => item.period)} 
           />
         )}
         

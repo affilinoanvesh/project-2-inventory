@@ -159,6 +159,28 @@ export interface ExpenseImport {
   items_skipped: number;
 }
 
+export interface AdditionalRevenue {
+  id?: number;
+  date: Date;
+  category: string;
+  amount: number;
+  description: string;
+  period?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  reference?: string;
+  payment_method?: string;
+  tax_included?: boolean;
+  tags?: string[];
+}
+
+export interface AdditionalRevenueCategory {
+  id?: number;
+  name: string;
+  description?: string;
+  color?: string;
+  is_taxable?: boolean;
+  budget_monthly?: number;
+}
+
 export interface SupplierPriceImport {
   id?: number;
   date: Date;
@@ -181,8 +203,57 @@ export interface ReportData {
   orders: Order[];
   products: Product[];
   expenses: Expense[];
+  additionalRevenue: AdditionalRevenue[];
   salesData: any[];
   productData: any[];
   expenseData: any[];
+  additionalRevenueReport: any[];
   profitabilityData: any[];
+  totalRevenue: number;
+  totalAdditionalRevenue: number;
+  totalExpenses: number;
+  totalProfit: number;
+}
+
+export interface Supplier {
+  id?: number;
+  name: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+  payment_terms?: string;
+  notes?: string;
+  created_at: Date;
+  updated_at?: Date;
+}
+
+export interface PurchaseOrder {
+  id?: number;
+  date: Date;
+  supplier_name: string;
+  supplier_id?: number;
+  reference_number: string;
+  total_amount: number;
+  payment_method: string;
+  status: 'ordered' | 'received' | 'partially_received';
+  notes?: string;
+  expiry_date?: Date;
+  created_at: Date;
+  updated_at?: Date;
+}
+
+export interface PurchaseOrderItem {
+  id?: number;
+  purchase_order_id: number;
+  sku: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  quantity_received?: number;
+  batch_number?: string;
+  expiry_date?: Date;
+  notes?: string;
 }
